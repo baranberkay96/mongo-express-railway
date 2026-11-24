@@ -65,7 +65,7 @@ Estimated cost: idle ≈ $3.5/month (0.33 GB RAM + ~0.5 GB volume); typical ≈ 
 - [x] Created database `handson`, collection `notes`, inserted a document; visible in the collection view; server version 8.0.38 shown (Node driver 4.x works with MongoDB 8.0).
 - [x] `ME_CONFIG_BASICAUTH_PASSWORD=abc` (STANDARD 8.29): deploy SUCCESS, warning logged, `abc` rejected (401) — the login never falls back to `pass`.
 - [x] Mongo Express and MongoDB redeployed at the same time: the first version (image's wait loop) hung ~2 min on a stale address; the template's own wait (3 s per attempt) came up at once. Data persisted across the MongoDB redeploy.
-- [ ] Post-publish deploy by the real template id (`ship.py publish`).
+- [x] Post-publish deploy by the real template id: PASS (2026-11-24).
 
 ## Open questions
 
