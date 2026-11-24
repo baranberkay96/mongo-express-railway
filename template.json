@@ -1,0 +1,154 @@
+{
+  "name": "Mongo Express 1.0 with MongoDB 8.0",
+  "description": "MongoDB web admin behind a password login, plus a ready MongoDB 8.0.",
+  "category": "Storage",
+  "tags": [
+    "mongo-express",
+    "mongodb",
+    "mongo",
+    "database",
+    "admin",
+    "gui",
+    "nosql"
+  ],
+  "image": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mongodb.svg",
+  "upstream": {
+    "mongo-express": "mongo-express:1.0.2-20-alpine3.19@sha256:1aae0077525133249133d42980ba23998712a1077e02ac0ac295b50a7a79d550 (mongo-express 1.0.2, Node 20, image built 2024-11-21; latest stable release)",
+    "mongodb": "mongo:8.0.38@sha256:479e85ced54ffb8a40dade1dcde2da2a9ae858515b9415e9cc54bfb8f0575d01 (MongoDB 8.0.38)",
+    "checked": "2026-11-24"
+  },
+  "services": {
+    "Mongo Express": {
+      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mongodb.svg",
+      "source": {
+        "image": "mongo-express:1.0.2-20-alpine3.19@sha256:1aae0077525133249133d42980ba23998712a1077e02ac0ac295b50a7a79d550"
+      },
+      "startCommand": "/bin/bash -c 'set -e; export ME_CONFIG_BASICAUTH=true; U=\"${ME_CONFIG_BASICAUTH_USERNAME:-}\"; if [ -z \"$U\" ]; then echo \"me-start: ME_CONFIG_BASICAUTH_USERNAME is empty, using admin\"; export ME_CONFIG_BASICAUTH_USERNAME=admin; fi; P=\"${ME_CONFIG_BASICAUTH_PASSWORD:-}\"; if [ ${#P} -lt 8 ] || [ ${#P} -gt 128 ]; then echo \"me-start: WARNING ME_CONFIG_BASICAUTH_PASSWORD must be 8-128 characters (got ${#P}). The login is locked with a random password.\"; echo \"me-start: Fix: set ME_CONFIG_BASICAUTH_PASSWORD to 8-128 characters and redeploy.\"; export ME_CONFIG_BASICAUTH_PASSWORD=\"$(head -c 48 /dev/urandom | base64 | tr -dc A-Za-z0-9 | head -c 40)\"; fi; unset P; case \"${PORT:-}\" in \"\"|*[!0-9]*) echo \"me-start: PORT=${PORT:-} is not a number, using 8081\"; export PORT=8081 ;; esac; export ME_CONFIG_CONNECT_RETRIES=\"${ME_CONFIG_CONNECT_RETRIES:-300}\"; case \"$ME_CONFIG_CONNECT_RETRIES\" in *[!0-9]*) export ME_CONFIG_CONNECT_RETRIES=300 ;; esac; echo \"me-start: basic auth on (user $ME_CONFIG_BASICAUTH_USERNAME), listening on ${VCAP_APP_HOST:-0.0.0.0}:$PORT\"; exec /sbin/tini -- /docker-entrypoint.sh mongo-express' me-start",
+      "healthcheckPath": "/status",
+      "healthcheckTimeout": 300,
+      "restartPolicyType": "ON_FAILURE",
+      "restartPolicyMaxRetries": 10,
+      "publicDomain": true,
+      "targetPort": 8081,
+      "tcpProxy": null,
+      "variables": {
+        "PORT": {
+          "defaultValue": "8081",
+          "description": "Port Mongo Express listens on; the public domain and the healthcheck use it.",
+          "required": false
+        },
+        "VCAP_APP_HOST": {
+          "defaultValue": "::",
+          "description": "Listen address (:: = IPv4 and IPv6).",
+          "required": false
+        },
+        "ME_CONFIG_BASICAUTH_USERNAME": {
+          "defaultValue": "admin",
+          "description": "Login user name (HTTP basic auth).",
+          "required": false
+        },
+        "ME_CONFIG_BASICAUTH_PASSWORD": {
+          "defaultValue": "${{secret(32, \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\")}}",
+          "description": "Login password, 8-128 characters (generated). Change it here and redeploy to rotate it.",
+          "required": false
+        },
+        "ME_CONFIG_MONGODB_URL": {
+          "defaultValue": "mongodb://${{MongoDB.MONGO_INITDB_ROOT_USERNAME}}:${{MongoDB.MONGO_INITDB_ROOT_PASSWORD}}@${{MongoDB.RAILWAY_PRIVATE_DOMAIN}}:27017/?authSource=admin",
+          "description": "MongoDB connection string (private network). Point it at another MongoDB to manage that one.",
+          "required": false
+        },
+        "ME_CONFIG_MONGODB_ENABLE_ADMIN": {
+          "defaultValue": "true",
+          "description": "true lists every database the connection user can see (needs an admin user); false shows only the database in the URL.",
+          "required": false
+        },
+        "ME_CONFIG_CONNECT_RETRIES": {
+          "defaultValue": "300",
+          "description": "Seconds to wait for MongoDB to accept connections at start.",
+          "required": false
+        },
+        "ME_CONFIG_SITE_COOKIESECRET": {
+          "defaultValue": "${{secret(32)}}",
+          "description": "Cookie signing secret (generated).",
+          "required": false
+        },
+        "ME_CONFIG_SITE_SESSIONSECRET": {
+          "defaultValue": "${{secret(32)}}",
+          "description": "Session secret (generated).",
+          "required": false
+        },
+        "ME_CONFIG_OPTIONS_READONLY": {
+          "defaultValue": "false",
+          "description": "true hides every write action (insert, edit, delete, drop).",
+          "required": false
+        },
+        "ME_CONFIG_SITE_GRIDFS_ENABLED": {
+          "defaultValue": "true",
+          "description": "Show GridFS buckets.",
+          "required": false
+        },
+        "ME_CONFIG_REQUEST_SIZE": {
+          "defaultValue": "50mb",
+          "description": "Largest request body (document edits and imports).",
+          "required": false
+        }
+      }
+    },
+    "MongoDB": {
+      "icon": "https://devicons.railway.app/i/mongodb.svg",
+      "source": {
+        "image": "mongo:8.0.38@sha256:479e85ced54ffb8a40dade1dcde2da2a9ae858515b9415e9cc54bfb8f0575d01"
+      },
+      "startCommand": "docker-entrypoint.sh mongod --ipv6 --bind_ip ::,0.0.0.0 --setParameter diagnosticDataCollectionEnabled=false",
+      "restartPolicyType": "ON_FAILURE",
+      "restartPolicyMaxRetries": 10,
+      "publicDomain": false,
+      "tcpProxy": null,
+      "volume": {
+        "mountPath": "/data/db"
+      },
+      "variables": {
+        "MONGO_INITDB_ROOT_USERNAME": {
+          "defaultValue": "mongo",
+          "description": "Root user created on the first start.",
+          "required": false
+        },
+        "MONGO_INITDB_ROOT_PASSWORD": {
+          "defaultValue": "${{secret(32, \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\")}}",
+          "description": "Root password (generated). Set on the first start only.",
+          "required": false
+        },
+        "MONGOHOST": {
+          "defaultValue": "${{RAILWAY_PRIVATE_DOMAIN}}",
+          "description": "Railway private domain name.",
+          "required": false
+        },
+        "MONGOPORT": {
+          "defaultValue": "27017",
+          "description": "MongoDB port.",
+          "required": false
+        },
+        "MONGOUSER": {
+          "defaultValue": "${{MONGO_INITDB_ROOT_USERNAME}}",
+          "description": "MongoDB user.",
+          "required": false
+        },
+        "MONGOPASSWORD": {
+          "defaultValue": "${{MONGO_INITDB_ROOT_PASSWORD}}",
+          "description": "Root password.",
+          "required": false
+        },
+        "MONGO_URL": {
+          "defaultValue": "mongodb://${{MONGO_INITDB_ROOT_USERNAME}}:${{MONGO_INITDB_ROOT_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:27017",
+          "description": "Private connection URL for other services in this project.",
+          "required": false
+        },
+        "RAILWAY_DEPLOYMENT_DRAINING_SECONDS": {
+          "defaultValue": "60",
+          "description": "Allow MongoDB to shut down cleanly.",
+          "required": false
+        }
+      }
+    }
+  }
+}
