@@ -1,5 +1,7 @@
 # Deploy and Host Mongo Express with Railway
 
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/mongo-express-10-with-mongodb-80?referralCode=20H68q)
+
 Mongo Express is a lightweight web-based admin interface for MongoDB, built with Node.js and Express. This template deploys Mongo Express 1.0 behind a mandatory password login, connected over Railway's private network to a bundled MongoDB 8.0 database, so you can browse collections and edit documents minutes after you deploy.
 
 ## About Hosting Mongo Express
