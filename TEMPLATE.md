@@ -49,11 +49,23 @@ Kept: official `mongo-express` image with basic auth and `/status` healthcheck; 
 
 ## Resource estimate
 
-RESOURCE_PLACEHOLDER
+Measured on the test deploy (2026-11-24, idle after logins, creating a database/collection/document): Mongo Express 50-85 MiB, MongoDB 270-450 MiB (WiredTiger sizes its cache from the container limit; on a small plan it stays far lower), CPU < 0.01 vCPU.
+
+| Service | Idle RAM | Typical RAM | CPU |
+|---|---|---|---|
+| Mongo Express | 60 MB | 80-150 MB | < 0.01 idle |
+| MongoDB | 270 MB | 300 MB-1 GB (cache grows with data) | 0.01-0.3 |
+
+Estimated cost: idle ≈ $3.5/month (0.33 GB RAM + ~0.5 GB volume); typical ≈ $5-12/month. Minimum plan: **Trial** runs it (both under 1 GB; MongoDB's cache adapts to the limit). Hobby recommended for real data.
 
 ## Verification checklist
 
-CHECKLIST_PLACEHOLDER
+- [x] Both services SUCCESS; `/status` 200 without auth (health only).
+- [x] `/` without credentials and with a wrong password → 401; with the generated credentials → 200, databases listed.
+- [x] Created database `handson`, collection `notes`, inserted a document; visible in the collection view; server version 8.0.38 shown (Node driver 4.x works with MongoDB 8.0).
+- [x] `ME_CONFIG_BASICAUTH_PASSWORD=abc` (STANDARD 8.29): deploy SUCCESS, warning logged, `abc` rejected (401) — the login never falls back to `pass`.
+- [x] Mongo Express and MongoDB redeployed at the same time: the first version (image's wait loop) hung ~2 min on a stale address; the template's own wait (3 s per attempt) came up at once. Data persisted across the MongoDB redeploy.
+- [ ] Post-publish deploy by the real template id (`ship.py publish`).
 
 ## Open questions
 

@@ -19,8 +19,12 @@
 #     with a random password nobody knows, and the log says how to fix it;
 #   - an empty user name becomes "admin";
 #   - a non-numeric PORT becomes 8081.
-# It also waits up to ME_CONFIG_CONNECT_RETRIES seconds (default 300) for
-# MongoDB, because services start in parallel on Railway.
+# It also waits up to ME_CONFIG_CONNECT_RETRIES attempts (about 4 s each,
+# default 300) for MongoDB, because services start in parallel on Railway.
+# Each attempt has a 3 s timeout: the image's own wait loop has none, and a
+# connect to the address of a MongoDB that is being redeployed hung for over
+# two minutes on Railway. After the wait it starts mongo-express the way the
+# image's /docker-entrypoint.sh does (tini + node app in /app).
 set -e
 export ME_CONFIG_BASICAUTH=true
 U="${ME_CONFIG_BASICAUTH_USERNAME:-}"
@@ -37,6 +41,24 @@ fi
 unset P
 case "${PORT:-}" in ""|*[!0-9]*) echo "me-start: PORT=${PORT:-} is not a number, using 8081"; export PORT=8081 ;; esac
 export ME_CONFIG_CONNECT_RETRIES="${ME_CONFIG_CONNECT_RETRIES:-300}"
-case "$ME_CONFIG_CONNECT_RETRIES" in *[!0-9]*) export ME_CONFIG_CONNECT_RETRIES=300 ;; esac
+case "$ME_CONFIG_CONNECT_RETRIES" in ""|*[!0-9]*) export ME_CONFIG_CONNECT_RETRIES=300 ;; esac
+W="${ME_CONFIG_MONGODB_URL:-}"
+H=""
+case "$W" in *,*|mongodb+srv:*|"") ;; *) W=${W#*://}; W=${W%%/*}; W=${W%%[?]*}; W=${W##*@}; H=${W%:*}; P=${W##*:} ;; esac
+if [ "$H" = "$W" ]; then P=27017; fi
+case "${P:-}" in ""|*[!0-9]*) P=27017 ;; esac
+N=0
+if [ -n "$H" ]; then
+echo "me-start: waiting for $H:$P"
+until timeout 3 bash -c "exec 6<>/dev/tcp/$H/$P" 2>/dev/null; do
+N=$((N + 1))
+if [ $N -ge $ME_CONFIG_CONNECT_RETRIES ]; then
+echo "me-start: $H:$P still unreachable after $N attempts, starting anyway"
+break
+fi
+sleep 1
+done
+fi
 echo "me-start: basic auth on (user $ME_CONFIG_BASICAUTH_USERNAME), listening on ${VCAP_APP_HOST:-0.0.0.0}:$PORT"
-exec /sbin/tini -- /docker-entrypoint.sh mongo-express
+cd /app
+exec /sbin/tini -- node app
